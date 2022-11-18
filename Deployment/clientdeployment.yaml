@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: client-config
+data:
+  SLEEP: '2'
+  STEP_TIME: '2'
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clientdeployment
+  labels:
+    app: client
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: clientPod
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: clientimage
+          image: preethamhd23/socketclient:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: SLEEP
+              valueFrom:
+                configMapKeyRef:
+                  name: client-config
+                  key: SLEEP
+            - name: STEP_TIME
+              valueFrom:
+                configMapKeyRef:
+                  name: client-config
+                  key: STEP_TIME
+
+          command:
+            - sh
+            - -c
+            - >
+              port=$( printenv | grep -i "SERVICE_SVC_SERVICE_PORT" | grep -o '[[:digit:]]*' );
+              ipAddress=$( printenv | grep -i "SERVICE_SVC_SERVICE_HOST" | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' );
+              ./var/lib/client $ipAddress $port $(SLEEP) $(STEP_TIME);
+
+  selector:
+    matchLabels:
+      app: client
